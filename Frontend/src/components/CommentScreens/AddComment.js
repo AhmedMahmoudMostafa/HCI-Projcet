@@ -113,7 +113,7 @@ const AddComment = ({ setSidebarShowStatus, slug, getStoryComments, activeUser, 
                     </div>
 
                     <div className={showStatus ? 'form-bottom-block' : 'form-bottom-block hidden'} >
-                        <StarRating setStar={setStar} setStarCurrentVal={setStarCurrentVal} starCurrentVal={starCurrentVal} />
+                        {/* <StarRating setStar={setStar} setStarCurrentVal={setStarCurrentVal} starCurrentVal={starCurrentVal} /> */}
 
                         <div className="formBtn-wrapper">
                             <button type='button'

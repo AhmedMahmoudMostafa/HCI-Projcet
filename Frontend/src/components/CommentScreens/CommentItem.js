@@ -99,7 +99,7 @@ const CommentItem = ({ comment, activeUser }) => {
                 <div className="commentLike-wrapper">
 
 
-                    <i className='biLike' onClick={() => handleCommentLike()}>
+                    {/* <i className='biLike' onClick={() => handleCommentLike()}>
                         {
                             likeStatus ? <MdWavingHand /> : <MdOutlineWavingHand />
 
@@ -108,10 +108,10 @@ const CommentItem = ({ comment, activeUser }) => {
                     <span className='commentlikeCount'>
                         {likeCount}
 
-                    </span>
+                    </span> */}
                 </div>
 
-                <div className="comment-star">
+                {/* <div className="comment-star">
                     {
                         [...Array(5)].map((_, index) => {
                             return (
@@ -125,7 +125,7 @@ const CommentItem = ({ comment, activeUser }) => {
                         })
                     }
 
-                </div>
+                </div> */}
 
             </div>
 

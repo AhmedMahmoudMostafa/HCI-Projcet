@@ -8,7 +8,7 @@ const StoryComments = ({ commentlist, count, activeUser }) => {
         <>
             {count !== 0 ?
                 <div className='storyComments'>
-                    <h5>MOST RELEVANT</h5>
+                    <h5>Comments</h5>
                     <div className="comment-Wrapper">
                         {
                             commentlist.map((comment) => {

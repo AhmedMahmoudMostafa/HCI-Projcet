@@ -1,107 +1,100 @@
 import axios from 'axios';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
-import "../../Css/DetailStory.css"
+import "../../Css/DetailStory.css";
 import Loader from '../GeneralScreens/Loader';
-import { FaRegHeart, FaHeart } from 'react-icons/fa'
-import { RiDeleteBin6Line } from 'react-icons/ri'
-import { FiEdit, FiArrowLeft } from 'react-icons/fi'
-import { FaRegComment } from 'react-icons/fa'
-import { BsBookmarkPlus, BsThreeDots, BsBookmarkFill } from 'react-icons/bs'
+import { FaRegHeart, FaHeart, FaRegWindowClose, FaRegComment } from 'react-icons/fa';
+import { RiDeleteBin6Line, RiDislikeFill } from 'react-icons/ri';
+import { FiEdit, FiArrowLeft } from 'react-icons/fi';
+import { BsBookmarkPlus, BsThreeDots, BsBookmarkFill, BsChatLeftQuote, BsEnvelope } from 'react-icons/bs';
 import CommentSidebar from '../CommentScreens/CommentSidebar';
+import { TiThumbsDown } from 'react-icons/ti';
+import { IoThumbsDownSharp } from 'react-icons/io5';
+import io from 'socket.io-client';
 
 const DetailStory = () => {
-  const [likeStatus, setLikeStatus] = useState(false)
-  const [likeCount, setLikeCount] = useState(0)
-  const [activeUser, setActiveUser] = useState({})
-  const [story, setStory] = useState({})
-  const [storyLikeUser, setStoryLikeUser] = useState([])
-  const [sidebarShowStatus, setSidebarShowStatus] = useState(false)
-  const [loading, setLoading] = useState(true)
-  const slug = useParams().slug
-  const [storyReadListStatus, setStoryReadListStatus] = useState(false)
-  const navigate = useNavigate()
+  const [likeStatus, setLikeStatus] = useState(false);
+  const [likeCount, setLikeCount] = useState(0);
+  const [activeUser, setActiveUser] = useState({});
+  const [story, setStory] = useState({});
+  const [storyLikeUser, setStoryLikeUser] = useState([]);
+  const [sidebarShowStatus, setSidebarShowStatus] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const slug = useParams().slug;
+  const [storyReadListStatus, setStoryReadListStatus] = useState(false);
+  const navigate = useNavigate();
 
-  useEffect(() => {
-
-    const getDetailStory = async () => {
-      setLoading(true)
-      var activeUser = {}
+  const handleLikeProgrammatically = useCallback(async () => {
+    if (!likeStatus) {
+      setLikeStatus(true);
       try {
-        const { data } = await axios.get("/auth/private", {
+        const { data } = await axios.post(`/story/${slug}/like`, { activeUser }, {
           headers: {
             "Content-Type": "application/json",
             authorization: `Bearer ${localStorage.getItem("authToken")}`,
           },
         });
-        activeUser = data.user
-
-        setActiveUser(activeUser)
-
+        setLikeCount(data.data.likeCount);
+        setStoryLikeUser(data.data.likes);
+      } catch (error) {
+        console.error('Error in liking the story programmatically:', error);
       }
-      catch (error) {
-        setActiveUser({})
-      }
-
-      try {
-        const { data } = await axios.post(`/story/${slug}`, { activeUser })
-        setStory(data.data)
-        setLikeStatus(data.likeStatus)
-        setLikeCount(data.data.likeCount)
-        setStoryLikeUser(data.data.likes)
-        setLoading(false)
-
-        const story_id = data.data._id;
-
-        if (activeUser.readList) {
-
-          if (!activeUser.readList.includes(story_id)) {
-            setStoryReadListStatus(false)
-          }
-          else {
-            setStoryReadListStatus(true)
-
-          }
-
-        }
-
-      }
-      catch (error) {
-        setStory({})
-        navigate("/not-found")
-      }
-
     }
+  }, [likeStatus, slug, activeUser]);
+
+  useEffect(() => {
+    const socket = io('http://localhost:3000');
+    socket.on('likeStoryUpdate', handleLikeProgrammatically);
+
+    return () => {
+      socket.off('likeStoryUpdate', handleLikeProgrammatically);
+      socket.disconnect();
+    };
+  }, [handleLikeProgrammatically]);
+
+  useEffect(() => {
+    const getDetailStory = async () => {
+      setLoading(true);
+      try {
+        const authResponse = await axios.get("/auth/private", {
+          headers: {
+            "Content-Type": "application/json",
+            authorization: `Bearer ${localStorage.getItem("authToken")}`,
+          },
+        });
+        setActiveUser(authResponse.data.user);
+
+        const storyResponse = await axios.post(`/story/${slug}`, { activeUser: authResponse.data.user });
+        setStory(storyResponse.data.data);
+        setLikeStatus(storyResponse.data.likeStatus);
+        setLikeCount(storyResponse.data.data.likeCount);
+        setStoryLikeUser(storyResponse.data.data.likes);
+      } catch (error) {
+        navigate("/not-found");
+      } finally {
+        setLoading(false);
+      }
+    };
     getDetailStory();
-
-  }, [slug, setLoading])
-
-
+  }, [slug, navigate]);
 
   const handleLike = async () => {
-    setTimeout(() => {
-      setLikeStatus(!likeStatus)
-    }, 1500)
-
+    setLikeStatus(!likeStatus);
     try {
       const { data } = await axios.post(`/story/${slug}/like`, { activeUser }, {
         headers: {
           "Content-Type": "application/json",
           authorization: `Bearer ${localStorage.getItem("authToken")}`,
         },
-      })
-
-      setLikeCount(data.data.likeCount)
-      setStoryLikeUser(data.data.likes)
-
+      });
+      setLikeCount(data.data.likeCount);
+      setStoryLikeUser(data.data.likes);
+    } catch (error) {
+      setStory({});
+      localStorage.removeItem("authToken");
+      navigate("/");
     }
-    catch (error) {
-      setStory({})
-      localStorage.removeItem("authToken")
-      navigate("/")
-    }
-
-  }
+  };
 
   const handleDelete = async () => {
 
@@ -251,8 +244,8 @@ const DetailStory = () => {
 
                       <i onClick={handleLike} >
 
-                        {likeStatus ? <FaHeart color="#0063a5" /> :
-                          <FaRegHeart />
+                        {likeStatus ? <IoThumbsDownSharp color="#0063a5" /> :
+                          <TiThumbsDown />
                         }
                       </i>
 
@@ -268,7 +261,7 @@ const DetailStory = () => {
                       <i onClick={(prev) => {
                         setSidebarShowStatus(!sidebarShowStatus)
                       }}>
-                        <FaRegComment />
+                        <BsEnvelope />
                       </i>
 
                       <b className='commentCount'>{story.commentCount}</b>
@@ -278,14 +271,14 @@ const DetailStory = () => {
                   </ul>
 
                   <ul>
-                    <li>
+                    {/* <li>
                       <i onClick={addStoryToReadList}>
 
                         {storyReadListStatus ? <BsBookmarkFill color='#0205b1' /> :
                           <BsBookmarkPlus />
                         }
                       </i>
-                    </li>
+                    </li> */}
 
                     <li className='BsThreeDots_opt'>
                       <i  >

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { v4 as uuidv4 } from 'uuid';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import io from 'socket.io-client';
 import SkeletonStory from '../Skeletons/SkeletonStory';
 import CardStory from '../StoryScreens/CardStory';
@@ -11,8 +11,11 @@ import '../../Css/Home.css';
 
 const Home = () => {
     const search = useLocation().search;
+    const navigate = useNavigate();
     const searchKey = new URLSearchParams(search).get('search');
     const [stories, setStories] = useState([]);
+    const [storyTitles, setStoryTitles] = useState([]);
+    const [counter, setCounter] = useState(0);
     const [loading, setLoading] = useState(true);
     const [pages, setPages] = useState(1);
     const [page, setPage] = useState(1);
@@ -22,13 +25,22 @@ const Home = () => {
         const socket = io('http://localhost:3000');
 
         socket.on('categoryUpdate', (data) => {
-            console.log('Received category update:', data);  // For debugging
             const categoriesToShow = Object.keys(data).filter(category => data[category]);
             setDisplayCategories(categoriesToShow);
         });
 
+        socket.on('counterUpdate', (updateValue) => {
+            setCounter(prevCounter => prevCounter + updateValue);
+        });
+
+        socket.on('navigateToStory', () => {
+            if (storyTitles[counter]) {
+                navigate(`/story/${storyTitles[counter]}`);
+            }
+        });
+
         return () => socket.disconnect();
-    }, []);
+    }, [counter, storyTitles, navigate]);
 
     useEffect(() => {
         const fetchStories = async () => {
@@ -37,7 +49,6 @@ const Home = () => {
                 const response = await axios.get(`/story/getAllStories?search=${searchKey || ''}&page=${page}`);
                 let fetchedStories = response.data.data;
 
-                // Apply filter only if there are categories to show
                 if (displayCategories.length > 0) {
                     fetchedStories = fetchedStories.filter(story => displayCategories.includes(story.category));
                 }
@@ -54,11 +65,21 @@ const Home = () => {
     }, [search, page, displayCategories]);
 
     useEffect(() => {
+        // Update story titles whenever the stories array changes
+        setStoryTitles(stories.map(story => story.slug));
+    }, [stories]);
+
+    useEffect(() => {
         setPage(1);
     }, [searchKey]);
 
     return (
         <div className="Inclusive-home-page">
+            {/* Display the counter */}
+            <div className="counter-display">
+                <h2>Selected Tree Index: {counter}</h2>
+            </div>
+
             {loading ? (
                 <div className="skeleton_emp">
                     {[...Array(6)].map(() => <SkeletonStory key={uuidv4()} />)}
